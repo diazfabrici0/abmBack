@@ -10,6 +10,9 @@ use Tymon\JWTAuth\Exceptions\JWTException;
 
 class AuthController extends Controller
 {
+    /**
+     * funcion para que el admin registre usuarios
+     */
     public function register(Request $request)
     {
         $user = auth('api')->user();
@@ -35,6 +38,9 @@ class AuthController extends Controller
         return response()->json(['message' => 'Usuario registrado con éxito'], 201);
     }
 
+    /**
+     * login
+     */
     public function login(Request $request)
     {
         $credentials = $request->only('email', 'password');
@@ -50,10 +56,12 @@ class AuthController extends Controller
         return $this->respondWithToken($token);
     }
     
+    /**
+     * funcion para refrescar el token
+     */
     public function refresh()
     {
         try {
-            // Tomamos el token actual y lo renovamos
             $token = auth('api')->refresh(); 
 
             return response()->json([
@@ -67,6 +75,9 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * logout
+     */
     public function logout(Request $request)
     {
         $token = $request->bearerToken();

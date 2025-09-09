@@ -11,32 +11,30 @@ use App\Models\Confirmation;
 class TaskController extends Controller
 {
     /**
-     * Esta funcion lista todas las tareas, para el admin y para los usuarios 
-     * asignados a las tareas.
+     * lista las tareas para los usuarios que estan asignados a ella
+     * (el admin ve todas las tareas)
      */
 
- public function index()
-{
-    $user = auth('api')->user(); // si usas Sanctum o auth
+     public function index()
+    {
+        $user = auth('api')->user(); 
 
-    if ($user->role === 'admin') {
-        // Admin ve todas las tareas
-        $tasks = Task::with('users')->get();
-    } else {
-        // Usuario estándar ve solo sus tareas
-        $tasks = Task::with('users')
-            ->whereHas('users', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
-            })->get();
+        if ($user->role === 'admin') {
+            $tasks = Task::with('users')->get();
+        } else {
+            $tasks = Task::with('users')
+                ->whereHas('users', function ($query) use ($user) {
+                    $query->where('user_id', $user->id);
+                })->get();
+        }
+
+        return response()->json($tasks);
     }
-
-    return response()->json($tasks);
-}
 
 
 
     /**
-     * Crear una nueva tarea
+     * crear una nueva tarea
      */
     public function store(Request $request)
     {
@@ -65,7 +63,7 @@ class TaskController extends Controller
     }
 
     /**
-     * Muestra una tarea específica
+     * muestra el detalle de una tarea específica
      */
     public function show(string $id)
     {
@@ -112,7 +110,7 @@ class TaskController extends Controller
     }
 
     /**
-     * Eliminar una tarea existente
+     * eliminar una tarea existente
      */
     public function destroy(string $id)
     {
@@ -128,96 +126,52 @@ class TaskController extends Controller
         return response()->json(['message' => 'Tarea eliminada']);
     }
 
-
     /**
-     * Asignar usuarios a una tarea
+     * se guarda la confirmacion de una tarea por parte de un usuario
      */
-    public function assingUsers(Request $request, $id)
+    public function confirmTask($id)
     {
         $task = Task::findOrFail($id);
         $user = auth('api')->user();
 
-        if ($user->role !== 'admin') {
+        // verificar que el usuario esté asignado a la tarea
+        if (!$task->users->contains($user->id)) {
             return response()->json(['error' => 'No autorizado'], 403);
         }
 
-        $validatedData = $request->validate([
-            'user_ids' => 'required|array',
-        ]);
+        // registrar la confirmación del usuario
+        $confirmation = Confirmation::updateOrCreate(
+            [
+                'task_id' => $task->id,
+                'user_id' => $user->id,
+            ],
+            [
+                'confirmed' => true,
+            ]
+        );
 
-        $task->users()->sync($validatedData['user_ids']);
+        $totalUsers = $task->users()->count();
+        $confirmedUsers = $task->confirmations()->where('confirmed', true)->count();
 
-        return response()->json($task->load('users'));
-    }
-
-    /**
-     * eliminar usuarios asignados a una tarea
-     */
-    public function removeUsers(Request $request, $id)
-    {
-        $task = Task::findOrFail($id);
-        $user = auth('api')->user();
-
-        if ($user->role !== 'admin') {
-            return response()->json(['error' => 'No autorizado'], 403);
+        // si al menos uno confirma, la cambia de estado a "in_progress"
+        if ($confirmedUsers > 0 && $task->status === 'pending') {
+            $task->status = 'in_progress';
+            $task->save();
         }
 
-        $validatedData = $request->validate([
-            'user_ids' => 'required|array',
+        // si todos confirman, la tarea cambia de estado a "completed"
+        if ($confirmedUsers === $totalUsers) {
+            $task->status = 'completed';
+            $task->save();
+        }
+
+        return response()->json([
+            'message' => $confirmedUsers === $totalUsers
+                ? 'Todos confirmaron, tarea completada ✅'
+                : 'Confirmación registrada',
+            'task' => $task->load('users', 'confirmations'),
+            'confirmation' => $confirmation,
         ]);
-
-        $task->users()->detach($validatedData['user_ids']);
-
-        return response()->json($task->load('users'));
-    }
-
-    /**
-     * Confirmar la realización de una tarea por parte de un usuario
-     */
-
-   public function confirmTask($id)
-{
-    $task = Task::findOrFail($id);
-    $user = auth('api')->user();
-
-    // Verificar que el usuario esté asignado a la tarea
-    if (!$task->users->contains($user->id)) {
-        return response()->json(['error' => 'No autorizado'], 403);
-    }
-
-    // Registrar la confirmación del usuario
-    $confirmation = Confirmation::updateOrCreate(
-        [
-            'task_id' => $task->id,
-            'user_id' => $user->id,
-        ],
-        [
-            'confirmed' => true,
-        ]
-    );
-
-    $totalUsers = $task->users()->count();
-    $confirmedUsers = $task->confirmations()->where('confirmed', true)->count();
-
-    // Si al menos uno confirma, la tarea pasa a "in_progress"
-    if ($confirmedUsers > 0 && $task->status === 'pending') {
-        $task->status = 'in_progress';
-        $task->save();
-    }
-
-    // Si todos confirman, la tarea pasa a "completed"
-    if ($confirmedUsers === $totalUsers) {
-        $task->status = 'completed';
-        $task->save();
-    }
-
-    return response()->json([
-        'message' => $confirmedUsers === $totalUsers
-            ? 'Todos confirmaron, tarea completada ✅'
-            : 'Confirmación registrada',
-        'task' => $task->load('users', 'confirmations'),
-        'confirmation' => $confirmation,
-    ]);
-}
+    }   
 
 }

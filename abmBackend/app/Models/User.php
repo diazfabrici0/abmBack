@@ -31,7 +31,6 @@ class User extends Authenticatable implements JWTSubject
 
     protected $dates = ['deleted_at'];
 
-    // Relaciones
     public function tasks()
     {
         return $this->belongsToMany(Task::class, 'task_user', 'user_id', 'task_id');
@@ -42,7 +41,6 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Confirmation::class);
     }
 
-    // Métodos requeridos por JWT
     public function getJWTIdentifier()
     {
         return $this->getKey();
