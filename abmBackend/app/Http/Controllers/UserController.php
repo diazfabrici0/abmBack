@@ -10,7 +10,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        $user = auth('api')->user();
         if ($user->role !== 'admin') {
             return response()->json(['error' => 'Forbidden'], 403);
         }
@@ -20,7 +20,7 @@ class UserController extends Controller
     // Ver tareas de un usuario específico
     public function userTasks($id)
     {
-        $authUser = auth()->user();
+        $authUser = auth('api')->user();
         if ($authUser->role !== 'admin' && $authUser->id != $id) {
             return response()->json(['error' => 'Forbidden'], 403);
         }
@@ -30,7 +30,7 @@ class UserController extends Controller
     }
 public function destroyUser($id)
 {
-    $user = auth()->user();
+    $user = auth('api')->user();
 
     if ($user->role !== 'admin') {
         return response()->json(['error' => 'Forbidden'], 403);

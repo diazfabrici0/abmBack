@@ -17,7 +17,7 @@ class TaskController extends Controller
 
  public function index()
 {
-    $user = auth()->user(); // si usas Sanctum o auth
+    $user = auth('api')->user(); // si usas Sanctum o auth
 
     if ($user->role === 'admin') {
         // Admin ve todas las tareas
@@ -40,7 +40,7 @@ class TaskController extends Controller
      */
     public function store(Request $request)
     {
-       $user = auth()->user();
+       $user = auth('api')->user();
 
         if ($user->role !== 'admin') {
             return response()->json(['error' => 'No autorizado'], 403);
@@ -70,7 +70,7 @@ class TaskController extends Controller
     public function show(string $id)
     {
         $task = Task::with('users', 'confirmations')->findOrFail($id);
-        $user = auth()->user();
+        $user = auth('api')->user();
 
         if ($user->role !== 'admin' && !$task->users->contains($user)) {
             return response()->json(['error' => 'No autorizado'], 403);
@@ -85,7 +85,7 @@ class TaskController extends Controller
     public function update(Request $request, string $id)
     {
         $task = Task::findOrFail($id);
-        $user = auth()->user();
+        $user = auth('api')->user();
 
         if ($user->role !== 'admin' && !$task->users->contains($user)) {
             return response()->json(['error' => 'No autorizado'], 403);
@@ -117,7 +117,7 @@ class TaskController extends Controller
     public function destroy(string $id)
     {
         $task = Task::findOrFail($id);
-        $user = auth()->user();
+        $user = auth('api')->user();
 
         if ($user->role !== 'admin') {
             return response()->json(['error' => 'No autorizado'], 403);
@@ -135,7 +135,7 @@ class TaskController extends Controller
     public function assingUsers(Request $request, $id)
     {
         $task = Task::findOrFail($id);
-        $user = auth()->user();
+        $user = auth('api')->user();
 
         if ($user->role !== 'admin') {
             return response()->json(['error' => 'No autorizado'], 403);
@@ -156,7 +156,7 @@ class TaskController extends Controller
     public function removeUsers(Request $request, $id)
     {
         $task = Task::findOrFail($id);
-        $user = auth()->user();
+        $user = auth('api')->user();
 
         if ($user->role !== 'admin') {
             return response()->json(['error' => 'No autorizado'], 403);
@@ -178,7 +178,7 @@ class TaskController extends Controller
    public function confirmTask($id)
 {
     $task = Task::findOrFail($id);
-    $user = auth()->user();
+    $user = auth('api')->user();
 
     // Verificar que el usuario esté asignado a la tarea
     if (!$task->users->contains($user->id)) {
